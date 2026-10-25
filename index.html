@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>أ. عمرو الجمال</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#06223d;--card:rgba(8,38,70,.78);--text:#fff;--muted:#b9d3ee;--accent:#fbb724;--line:rgba(255,255,255,.18)}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Cairo',Tahoma,Arial,sans-serif;color:var(--text);background:var(--bg) url(bg.jpg) no-repeat top center/cover fixed}
+.hero{min-height:88vh}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px 40px;background:linear-gradient(to bottom,transparent,rgba(6,34,61,.85) 60px)}
+.card{background:var(--card);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:16px}
+h2{margin:0 0 12px;font-size:20px;color:var(--accent)}
+.row{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:12px;margin-top:8px;background:rgba(255,255,255,.06)}
+.row b{font-size:18px}
+label{display:block;margin:10px 0 6px;color:var(--muted);font-size:14px}
+input{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.1);color:#fff;font:inherit;font-size:16px}
+input::placeholder{color:#8fb0d0}
+button,.btn{display:block;width:100%;margin-top:14px;padding:13px;border:0;border-radius:12px;background:var(--accent);color:#06223d;font:inherit;font-weight:900;font-size:17px;text-align:center;text-decoration:none;cursor:pointer}
+button:disabled{opacity:.6}
+.btn.wa{background:#25d366;color:#04361a}
+.note{font-size:13px;color:var(--muted);margin:10px 0 0;line-height:1.7}
+.msg{margin-top:12px;padding:10px;border-radius:10px;font-size:15px;display:none}
+.msg.ok{display:block;background:rgba(37,211,102,.2)}
+.msg.err{display:block;background:rgba(255,90,90,.22)}
+.count{font-weight:700;color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="hero"></div>
+<div class="wrap">
+
+<section class="card">
+  <h2>📅 مواعيد الدروس</h2>
+  <div class="row"><b>الأربعاء</b><span>الساعة 1 صباحًا</span></div>
+  <div class="row"><b>الخميس</b><span>الساعة 1 صباحًا</span></div>
+</section>
+
+<section class="card">
+  <h2>📘 حجز الملزمة</h2>
+  <label for="nm">الاسم</label>
+  <input id="nm" placeholder="اكتب اسمك" autocomplete="name" maxlength="60">
+  <label for="cl">الفصل</label>
+  <input id="cl" placeholder="اكتب فصلك" maxlength="40">
+  <button id="go">احجز الملزمة</button>
+  <div id="msg" class="msg"></div>
+  <p class="note">عدد الحجوزات الحالية: <span class="count" id="cnt">—</span><br>
+  الحجز بيتجدد تلقائيًا كل <b>آخر خميس</b> في الشهر، والتجديد القادم: <b id="nxt"></b></p>
+</section>
+
+<section class="card">
+  <h2>💬 التواصل</h2>
+  <a class="btn wa" href="https://wa.me/201111101046" target="_blank" rel="noopener">واتساب: 01111101046</a>
+</section>
+
+</div>
+<script>
+function lastThu(y,m){var d=new Date(y,m+1,0);while(d.getDay()!==4)d.setDate(d.getDate()-1);return d}
+function fmt(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+var now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+var cur=lastThu(now.getFullYear(),now.getMonth());
+if(today<cur)cur=lastThu(now.getFullYear(),now.getMonth()-1);
+var nx=lastThu(cur.getFullYear(),cur.getMonth()+1);
+var cycle=fmt(cur);
+document.getElementById('nxt').textContent=nx.toLocaleDateString('ar-EG',{weekday:'long',day:'numeric',month:'long'});
+
+var API_URL="PUT_YOUR_APPS_SCRIPT_URL_HERE";
+var msg=document.getElementById('msg'),btn=document.getElementById('go');
+function show(t,c){msg.className='msg '+c;msg.textContent=t}
+function loadCount(){
+  fetch(API_URL+'?cycle='+cycle).then(function(r){return r.json()}).then(function(j){
+    document.getElementById('cnt').textContent=j.count}).catch(function(){});
+}
+if(API_URL.indexOf('http')===0)loadCount();
+btn.onclick=async function(){
+  var n=document.getElementById('nm').value.trim(),c=document.getElementById('cl').value.trim();
+  if(!n||!c){show('من فضلك اكتب الاسم والفصل','err');return}
+  if(API_URL.indexOf('http')!==0){show('الحجز غير متاح حاليًا، تواصل واتساب','err');return}
+  btn.disabled=true;
+  try{
+    await fetch(API_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({name:n,cls:c,cycle:cycle})});
+    show('تم حجز الملزمة ✅ — '+n,'ok');
+    document.getElementById('nm').value='';document.getElementById('cl').value='';
+    setTimeout(loadCount,1500);
+  }catch(e){show('حصلت مشكلة، حاول تاني أو تواصل واتساب','err')}
+  btn.disabled=false;
+};
+</script>
+</body>
+</html>
